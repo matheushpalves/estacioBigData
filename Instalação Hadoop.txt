@@ -1,0 +1,154 @@
+# Guia de Instalação e Configuração do Hadoop
+
+---
+
+### Instalação JDK
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y openjdk-11-jdk ssh rsync
+
+---
+
+Baixar e configurar Hadoop
+wget https://downloads.apache.org/hadoop/common/hadoop-3.3.6/hadoop-3.3.6.tar.gz
+tar -xvzf hadoop-3.3.6.tar.gz
+sudo mv hadoop-3.3.6 /usr/local/hadoop
+
+---
+
+Configurar variáveis de ambiente
+nano ~/.bashrc
+
+# Hadoop
+export HADOOP_HOME=/usr/local/hadoop
+export HADOOP_CONF_DIR=$HADOOP_HOME/etc/hadoop
+export PATH=$PATH:$HADOOP_HOME/bin:$HADOOP_HOME/sbin
+export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+
+Aplicar alterações:
+source ~/.bashrc
+
+---
+
+Configurar o arquivo core-site.xml
+
+cd /usr/local/hadoop/etc/hadoop
+nano core-site.xml
+
+Substituir o conteúdo por:
+<configuration>
+   <property>
+       <name>fs.defaultFS</name>
+       <value>hdfs://localhost:9000</value>
+   </property>
+</configuration>
+
+---
+
+Configurar o arquivo hdfs-site.xml
+
+nano hdfs-site.xml
+
+Substituir o conteúdo por:
+<configuration>
+   <property>
+       <name>dfs.replication</name>
+       <value>1</value>
+   </property>
+
+   <property>
+       <name>dfs.namenode.name.dir</name>
+       <value>file:///home/YOUR_USER/hadoopdata/namenode</value>
+   </property>
+
+   <property>
+       <name>dfs.datanode.data.dir</name>
+       <value>file:///home/YOUR_USER/hadoopdata/datanode</value> 
+   </property>
+</configuration>
+
+---
+
+SSH sem senha
+OBS: Executar um comando por vez.
+
+ssh-keygen -t rsa -P ""
+cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
+chmod 600 ~/.ssh/authorized_keys
+ssh localhost
+
+Se houver erro, execute:
+sudo apt install openssh-server -y
+sudo service ssh start
+ssh localhost
+
+---
+
+Criar as pastas do HDFS
+mkdir -p ~/hadoopdata/namenode
+mkdir -p ~/hadoopdata/datanode
+
+---
+
+Instalação do Java 
+sudo apt update
+sudo apt install openjdk-11-jdk -y
+java -version
+
+---
+
+Editar ~/.bashrc
+nano ~/.bashrc
+
+export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+export PATH=$PATH:$JAVA_HOME/bin
+
+Aplicar alterações:
+source ~/.bashrc
+
+---
+
+Formatar o NameNode
+hdfs namenode -format
+start-dfs.sh
+jps
+
+---
+
+Se houver erro com o Java, edite o arquivo:
+nano $HADOOP_HOME/etc/hadoop/hadoop-env.sh
+
+Substitua a linha:
+# export JAVA_HOME=/path/to/java
+
+por:
+export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+
+---
+
+Testar o DFS
+start-dfs.sh
+jps
+
+
+Esperado:
+NameNode
+DataNode
+SecondaryNameNode
+
+Acesse: http://localhost:9870
+
+---
+
+Iniciar o YARN
+start-yarn.sh
+jps
+
+Esperado:
+ResourceManager
+NodeManager
+Acesse: http://localhost:8088
+
+
+
+
+
