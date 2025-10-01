@@ -1,0 +1,124 @@
+#############################################################################
+# Guia de Instalação e Configuração - Hadoop com Docker (Ambiente Isolado)
+#
+# Data: 01 de outubro de 2025
+#############################################################################
+
+
+---
+### PARTE 1: INSTALAÇÃO DO DOCKER NO SISTEMA HOST (ZORIN OS / UBUNTU)
+---
+
+# 1.1. Preparar o sistema
+sudo apt update && sudo apt upgrade -y
+sudo apt-get remove docker docker-engine docker.io containerd runc
+
+# 1.2. Instalar pré-requisitos do apt
+sudo apt-get install ca-certificates curl gnupg
+
+# 1.3. Adicionar a chave GPG oficial do Docker
+sudo install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+sudo chmod a+r /etc/apt/keyrings/docker.gpg
+
+# 1.4. Adicionar o repositório do Docker
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+# 1.5. Instalar o Docker Engine
+sudo apt-get update
+sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+# 1.6. Configurar Docker para rodar sem sudo (MUITO IMPORTANTE)
+sudo usermod -aG docker $USER
+# AVISO: Você precisa REINICIAR O COMPUTADOR ou fazer logout/login para que esta alteração tenha efeito.
+
+# 1.7. Verificar a instalação do Docker
+docker run hello-world
+
+
+---
+### PARTE 2: CRIANDO E CONFIGURANDO O CONTÊINER HADOOP
+---
+
+# 2.1. Iniciar o contêiner Hadoop
+# O comando abaixo baixa a imagem, cria o contêiner com o nome "hadoop" e abre um terminal dentro dele.
+# As opções "-p" publicam as portas do Hadoop para que você possa acessar as interfaces web.
+docker run -it -p 9870:9870 -p 8088:8088 --name hadoop bde2020/hadoop-base /bin/bash
+
+# ============================================================================
+# AVISO: TODOS OS COMANDOS ABAIXO DEVEM SER EXECUTADOS DENTRO DO TERMINAL
+#        DO CONTÊINER (o que começa com "root@...")
+# ============================================================================
+
+# 2.2. Corrigir repositórios do Debian "Stretch" (versão antiga)
+echo "deb http://archive.debian.org/debian/ stretch main" > /etc/apt/sources.list
+apt-get update
+
+# 2.3. Instalar e iniciar o SSH
+apt-get install -y ssh
+service ssh start
+
+# 2.4. Configurar SSH sem senha para o usuário root
+# Pressione Enter para todas as perguntas do comando abaixo.
+ssh-keygen -t rsa
+cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
+chmod 600 ~/.ssh/authorized_keys
+
+# 2.5. Definir variáveis de ambiente para o Hadoop rodar como root
+export HDFS_NAMENODE_USER=root
+export HDFS_DATANODE_USER=root
+export HDFS_SECONDARYNAMENODE_USER=root
+export YARN_RESOURCEMANAGER_USER=root
+export YARN_NODEMANAGER_USER=root
+
+# 2.6. Definir o JAVA_HOME permanentemente para o Hadoop
+echo 'export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/jre' >> $HADOOP_HOME/etc/hadoop/hadoop-env.sh
+
+
+---
+### PARTE 3: INICIANDO E VERIFICANDO O HADOOP
+---
+# OBS: Comandos executados DENTRO do contêiner.
+
+# 3.1. Formatar o NameNode (executar apenas uma vez)
+$HADOOP_HOME/bin/hdfs namenode -format
+
+# 3.2. Iniciar os serviços do HDFS e YARN
+$HADOOP_HOME/sbin/start-dfs.sh
+$HADOOP_HOME/sbin/start-yarn.sh
+
+# 3.3. Verificar se todos os processos estão rodando
+jps
+
+# Esperado (a ordem pode variar):
+# NameNode
+# DataNode
+# SecondaryNameNode
+# ResourceManager
+# NodeManager
+# Jps
+
+# 3.4. Acessar interfaces web no seu navegador (fora do contêiner)
+# HDFS NameNode: http://localhost:9870
+# YARN ResourceManager: http://localhost:8088
+
+
+---
+### PARTE 4: COMANDOS ÚTEIS PARA GERENCIAR O AMBIENTE
+---
+# OBS: Comandos executados no terminal do seu Zorin OS, NÃO dentro do contêiner.
+
+# Para iniciar o serviço do Docker (caso não inicie com o sistema)
+sudo systemctl start docker
+
+# Para parar o contêiner do Hadoop
+docker stop hadoop
+
+# Para iniciar novamente um contêiner já existente e parado
+docker start hadoop
+
+# Para acessar o terminal de um contêiner que já está rodando em segundo plano
+docker exec -it hadoop /bin/bash
