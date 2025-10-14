@@ -105,9 +105,43 @@ jps
 # HDFS NameNode: http://localhost:9870
 # YARN ResourceManager: http://localhost:8088
 
+### PARTE 4: AUTOMATIZAR A INICIALIZAÇÃO DO HADOOP
+
+# OBS: Esse comando deve ser executado dentro do terminal do container
+# Criar o arquivo inicializador
+''' bash
+echo '#!/bin/bash
+# Define as variáveis de ambiente necessárias
+export HDFS_NAMENODE_USER=root
+export HDFS_DATANODE_USER=root
+export HDFS_SECONDARYNAMENODE_USER=root
+export YARN_RESOURCEMANAGER_USER=root
+export YARN_NODEMANAGER_USER=root
+
+echo "Iniciando serviço SSH..."
+service ssh start
+echo "Iniciando HDFS..."
+$HADOOP_HOME/sbin/start-dfs.sh
+echo "Iniciando YARN..."
+$HADOOP_HOME/sbin/start-yarn.sh
+echo "Serviços iniciados! Verificando com jps:"
+jps' > /root/iniciar-hadoop.sh
+'''
+
+# Dar a permição de ser executável, ainda dentro do terminal do container
+chmod +x /root/iniciar-hadoop.sh
+
+# Inicializa o container, no terminal do seu sistema
+docker start <nome do container>
+
+# Abrir o terminal interno do container, ainda no terminal do seu sistema
+docker exec -it hadoop /bin/bash
+
+# E finalmente (dentro do terminal do container)
+/root/iniciar-hadoop.sh
 
 ---
-### PARTE 4: COMANDOS ÚTEIS PARA GERENCIAR O AMBIENTE
+### PARTE 5: COMANDOS ÚTEIS PARA GERENCIAR O AMBIENTE
 ---
 # OBS: Comandos executados no terminal do seu Zorin OS, NÃO dentro do contêiner.
 
